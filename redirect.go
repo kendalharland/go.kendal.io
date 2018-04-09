@@ -7,6 +7,10 @@ import (
 	"strings"
 )
 
+const (
+	hostname = "go.kendal.io"
+)
+
 var (
 	tmpl = template.Must(template.New("github").Parse(`<!DOCTYPE html>
 <html>
@@ -27,7 +31,7 @@ type PkgDescriptor struct {
 	Remote string
 }
 
-func redirect(w http.ResponseWriter, r *http.Request) {
+func Redirect(w http.ResponseWriter, r *http.Request) {
 	_ = requireHTTPS(w, r) ||
 		requireGET(w, r) ||
 		redirectBrowserToGodoc(w, r) ||
@@ -54,17 +58,26 @@ func requireGET(w http.ResponseWriter, r *http.Request) bool {
 
 func redirectBrowserToGodoc(w http.ResponseWriter, r *http.Request) bool {
 	if r.FormValue("go-get") != "1" {
-		http.Redirect(w, r, "https://godoc.org/"+r.Host+r.URL.Path,
-			http.StatusTemporaryRedirect)
+		var newURL = "https://godoc.org/" + r.Host + r.URL.Path
+		if strings.TrimPrefix(r.URL.Path, "/") == "" {
+			newURL = "https://godoc.org/?q=" + hostname
+		}
+		http.Redirect(w, r, newURL, http.StatusTemporaryRedirect)
 		return true
 	}
 	return false
 }
 
 func redirectToGithub(w http.ResponseWriter, r *http.Request) bool {
-	pkg := strings.TrimPrefix(r.URL.Path, "/")
+	pkg := strings.Trim(r.URL.Path, "/")
+
+	// Redirect go.kendal.io/foo/cmd/bar -> go.kendal.io/foo
+	parts := strings.Split(pkg, "/")
+	if len(parts) > 1 {
+		pkg = parts[0]
+	}
 	descriptor := &PkgDescriptor{
-		Package: "go.kendal.io/" + pkg,
+		Package: hostname + "/" + pkg,
 		Remote:  "https://github.com/kharland/" + pkg,
 	}
 

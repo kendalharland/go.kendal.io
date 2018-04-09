@@ -7,6 +7,6 @@ import (
 )
 
 func main() {
-	http.HandleFunc("/", redirect)
+	http.HandleFunc("/", Redirect)
 	appengine.Main()
 }
